@@ -35,3 +35,15 @@ jobs:
         uses: github/codeql-action/analyze@v3
         with:
           category: "/language:${{ matrix.language }}"
+
+      - name: Check for SAST findings
+        run: |
+          SARIF_FILE=$(find ../results -name "*.sarif" | head -1)
+          if [ -f "$SARIF_FILE" ]; then
+            RESULTS=$(jq '[.runs[].results[]] | length' "$SARIF_FILE")
+            echo "Found $RESULTS vulnerability findings"
+            if [ "$RESULTS" -gt 0 ]; then
+              echo "::error::SAST scan found $RESULTS vulnerabilities. Pipeline blocked."
+              exit 1
+            fi
+          fi
