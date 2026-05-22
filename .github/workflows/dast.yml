@@ -13,22 +13,28 @@ jobs:
     name: ZAP DAST Scan
     runs-on: ubuntu-latest
 
+    services:
+      juice-shop:
+        image: bkimminich/juice-shop
+        ports:
+          - 3000:3000
+        options: >-
+          --health-cmd "curl -f http://localhost:3000 || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 30
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install dependencies
-        run: npm install --production
-
-      - name: Start Juice Shop
+      - name: Wait for Juice Shop
         run: |
-          npm start &
-          sleep 30
+          echo "Waiting for Juice Shop..."
+          until curl -sf http://localhost:3000 > /dev/null; do
+            sleep 5
+          done
+          echo "Juice Shop is ready!"
 
       - name: Run ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.14.0
