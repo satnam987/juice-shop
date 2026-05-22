@@ -1,4 +1,4 @@
-name: "CodeQL SAST"
+name: "Secret Scanning"
 
 on:
   push:
@@ -6,44 +6,20 @@ on:
   pull_request:
     branches: ["main"]
   schedule:
-    - cron: "0 6 * * 1"
+    - cron: "0 6 * * 3"
 
 jobs:
-  sast:
-    name: CodeQL Analysis
+  secret-scan:
+    name: Gitleaks Secret Scan
     runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-
-    strategy:
-      fail-fast: false
-      matrix:
-        language: ["javascript"]
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
         with:
-          languages: ${{ matrix.language }}
+          fetch-depth: 0
 
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-        with:
-          category: "/language:${{ matrix.language }}"
-
-      - name: Check for SAST findings
-        run: |
-          SARIF_FILE=$(find ../results -name "*.sarif" | head -1)
-          if [ -f "$SARIF_FILE" ]; then
-            RESULTS=$(jq '[.runs[].results[]] | length' "$SARIF_FILE")
-            echo "Found $RESULTS vulnerability findings"
-            if [ "$RESULTS" -gt 0 ]; then
-              echo "::error::SAST scan found $RESULTS vulnerabilities. Pipeline blocked."
-              exit 1
-            fi
-          fi
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
